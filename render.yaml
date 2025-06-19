@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: traffic-api
+    env: python
+    buildCommand: ""
+    startCommand: "python app.py"
