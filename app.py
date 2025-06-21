@@ -12,11 +12,13 @@ CORS(app)
 
 # === Download model from Hugging Face ===
 MODEL_PATH = 'yolo11l.pt'
-MODEL_URL = 'https://huggingface.co/DarleVysali/yolo-model/resolve/main/yolo11l%20(1).pt'
+MODEL_URL = MODEL_URL = 'https://huggingface.co/DarleVysali/yolo-model/resolve/main/yolo11l.pt'
 
 if not os.path.exists(MODEL_PATH):
     print("Downloading YOLO model from Hugging Face...")
     response = requests.get(MODEL_URL)
+    if response.status_code != 200:
+        raise Exception("❌ Failed to download model. Check URL or permissions.")
     with open(MODEL_PATH, 'wb') as f:
         f.write(response.content)
     print("✅ Model downloaded successfully.")
