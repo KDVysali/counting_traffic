@@ -1,30 +1,30 @@
+import os
+import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import cv2
 from ultralytics import YOLO
 from collections import defaultdict
-import os
 import uuid
-import requests
 
 app = Flask(__name__)
 CORS(app)
 
-# === Model Download (if not already downloaded) ===
+# === Download model from Hugging Face ===
 MODEL_PATH = 'yolo11l.pt'
+MODEL_URL = 'https://huggingface.co/DarleVysali/yolo-model/resolve/main/yolo11l%20(1).pt'
+
 if not os.path.exists(MODEL_PATH):
-    print("Downloading YOLO model...")
-    url = 'https://drive.google.com/uc?export=download&id=1U3KpDbjaWHwINnJG9cK9zllWGq2ZWy3o'
-    response = requests.get(url)
+    print("Downloading YOLO model from Hugging Face...")
+    response = requests.get(MODEL_URL)
     with open(MODEL_PATH, 'wb') as f:
         f.write(response.content)
-    print("Model downloaded successfully.")
+    print("✅ Model downloaded successfully.")
 
-# === Load YOLO model ===
+# === Load the YOLO model ===
 model = YOLO(MODEL_PATH)
 class_list = model.names
 
-# === API Route ===
 @app.route('/process_video', methods=['POST'])
 def process_video():
     if 'video' not in request.files:
@@ -67,12 +67,10 @@ def process_video():
     os.remove(filename)
     return jsonify(dict(class_counts))
 
-# === Default route to test if API is running ===
 @app.route('/')
 def index():
     return "✅ Traffic counting API is running. Use POST /process_video"
 
-# === Run the app on the correct host/port ===
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
