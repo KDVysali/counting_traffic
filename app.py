@@ -3,7 +3,7 @@ import uuid
 import cv2
 import requests
 from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin  # ⬅️ Add cross_origin here
 from collections import defaultdict
 from ultralytics import YOLO
 
@@ -29,6 +29,7 @@ class_list = model.names
 
 # === API Route to process video ===
 @app.route('/process_video', methods=['POST'])
+@cross_origin(origins="*")
 def process_video():
     if 'video' not in request.files:
         return jsonify({"error": "No video uploaded"}), 400
@@ -102,6 +103,7 @@ def process_video():
 
 # === Route for health check ===
 @app.route('/')
+@cross_origin(origins="*")
 def index():
     return "✅ Traffic counting API is running. Use POST /process_video"
 
