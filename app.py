@@ -8,7 +8,7 @@ from collections import defaultdict
 from ultralytics import YOLO
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=["https://counting-traffic-frontend.vercel.app"])
 
 # === Download YOLO model ===
 MODEL_PATH = 'yolo11l.pt'
