@@ -5,37 +5,28 @@ import logging
 
 app = Flask(__name__)
 
-# Custom CORS origin checker that allows all *.vercel.app domains
-def allow_vercel_origin(origin):
-    return origin and origin.endswith(".vercel.app")
+# ✅ CORS: Allow all domains (for testing or if multiple Vercel previews used)
+CORS(app, origins="*")  # You can also use a list like: ["https://your-main.vercel.app"]
 
-CORS(app, origins=allow_vercel_origin, supports_credentials=True)
-
-# Enable logging
+# Logging for debugging
 logging.basicConfig(level=logging.INFO)
 
 @app.route('/')
 def index():
     return jsonify({"status": "Backend is running."}), 200
 
-# === Manual CORS Preflight Handler for /process_video ===
+# Optional CORS preflight handler (not required unless your server is very strict)
 @app.route('/process_video', methods=['OPTIONS'])
 def process_video_options():
-    origin = request.headers.get('Origin')
     response = make_response()
-    if origin and origin.endswith(".vercel.app"):
-        response.headers['Access-Control-Allow-Origin'] = origin
+    response.headers['Access-Control-Allow-Origin'] = '*'
     response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
     return response
 
-# === Video Upload Handler ===
 @app.route('/process_video', methods=['POST'])
 def process_video():
     try:
-        origin = request.headers.get('Origin')
-        logging.info(f"Request received from origin: {origin}")
-        
         if 'video' not in request.files:
             logging.warning("No video file found in request")
             return jsonify({'error': 'No video file uploaded'}), 400
@@ -52,18 +43,12 @@ def process_video():
         video.save(save_path)
         logging.info(f"Video saved at {save_path}")
 
-        # Your actual processing logic would go here
+        # TODO: Add your processing logic here
 
-        # Build response
-        response = jsonify({
+        return jsonify({
             'message': 'Video received successfully',
             'filename': video.filename
-        })
-
-        if origin and origin.endswith(".vercel.app"):
-            response.headers['Access-Control-Allow-Origin'] = origin
-
-        return response, 200
+        }), 200
 
     except Exception as e:
         logging.exception("Error during video processing")
