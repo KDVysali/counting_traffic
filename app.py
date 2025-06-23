@@ -1,58 +1,53 @@
 from flask import Flask, request, jsonify, make_response
-from flask_cors import CORS
-import os
-import logging
+from flask_cors import CORS, cross_origin
+import os, uuid, logging, requests, cv2
+from ultralytics import YOLO
+from collections import defaultdict
 
 app = Flask(__name__)
+CORS(app)  # ⚠️ Enable CORS for all routes and origins
 
-# ✅ CORS: Allow all domains (for testing or if multiple Vercel previews used)
-CORS(app, origins="*")  # You can also use a list like: ["https://your-main.vercel.app"]
-
-# Logging for debugging
 logging.basicConfig(level=logging.INFO)
 
-@app.route('/')
+# Download and load model (your existing code)
+MODEL_PATH = 'yolo11l.pt'
+MODEL_URL = 'https://huggingface.co/DarleVysali/yolo-model/resolve/main/yolo11l.pt'
+if not os.path.exists(MODEL_PATH):
+    logging.info("Downloading YOLO model...")
+    resp = requests.get(MODEL_URL)
+    resp.raise_for_status()
+    with open(MODEL_PATH, 'wb') as f:
+        f.write(resp.content)
+    logging.info("Model downloaded.")
+model = YOLO(MODEL_PATH)
+class_list = model.names
+
+@app.route('/', methods=['GET', 'OPTIONS'])
 def index():
     return jsonify({"status": "Backend is running."}), 200
 
-# Optional CORS preflight handler (not required unless your server is very strict)
-@app.route('/process_video', methods=['OPTIONS'])
-def process_video_options():
-    response = make_response()
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
-    return response
-
-@app.route('/process_video', methods=['POST'])
+@app.route('/process_video', methods=['POST', 'OPTIONS'])
+@cross_origin()  # Allow CORS on this route
 def process_video():
-    try:
-        if 'video' not in request.files:
-            logging.warning("No video file found in request")
-            return jsonify({'error': 'No video file uploaded'}), 400
+    if request.method == 'OPTIONS':
+        # Flask-CORS handles preflight automatically, but safe to respond
+        return make_response(('OK', 204, {}))
 
-        video = request.files['video']
+    if 'video' not in request.files:
+        return jsonify({'error': 'No video file uploaded'}), 400
 
-        if video.filename == '':
-            logging.warning("Empty filename")
-            return jsonify({'error': 'Empty video file name'}), 400
+    video = request.files['video']
+    if video.filename == '':
+        return jsonify({'error': 'Empty file name'}), 400
 
-        # Save uploaded video
-        save_path = os.path.join("uploads", video.filename)
-        os.makedirs("uploads", exist_ok=True)
-        video.save(save_path)
-        logging.info(f"Video saved at {save_path}")
+    save_path = os.path.join("uploads", video.filename)
+    os.makedirs("uploads", exist_ok=True)
+    video.save(save_path)
+    logging.info(f"Saved video to {save_path}")
 
-        # TODO: Add your processing logic here
+    # (Your processing logic here)
 
-        return jsonify({
-            'message': 'Video received successfully',
-            'filename': video.filename
-        }), 200
-
-    except Exception as e:
-        logging.exception("Error during video processing")
-        return jsonify({'error': 'Internal server error', 'details': str(e)}), 500
+    return jsonify({'message': 'Video processed', 'filename': video.filename}), 200
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
