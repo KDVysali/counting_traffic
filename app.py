@@ -2,14 +2,17 @@ import os
 import uuid
 import cv2
 import requests
-from flask import Flask, request, jsonify, send_from_directory, make_response
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS, cross_origin
 from collections import defaultdict
 from ultralytics import YOLO
 
 app = Flask(__name__)
-CORS(app, origins=["https://counting-traffic-frontend.vercel.app"])
 
+# ✅ Allow ALL origins for now (test mode). Replace "*" with specific Vercel domain later if needed.
+CORS(app, origins="*", supports_credentials=True)
+
+# === Download YOLO model if not already ===
 MODEL_PATH = 'yolo11l.pt'
 MODEL_URL = 'https://huggingface.co/DarleVysali/yolo-model/resolve/main/yolo11l.pt'
 
@@ -20,27 +23,21 @@ if not os.path.exists(MODEL_PATH):
         raise Exception("❌ Failed to download model. Check URL or permissions.")
     with open(MODEL_PATH, 'wb') as f:
         f.write(response.content)
-    print("✅ Model downloaded.")
+    print("✅ Model downloaded successfully.")
 
+# === Load model ===
 model = YOLO(MODEL_PATH)
 class_list = model.names
 
+# === API Health Check ===
 @app.route('/')
-@cross_origin(origins="*")
+@cross_origin(origins="*")  # ✅ Apply CORS to root route too
 def index():
-    return jsonify({"status": "✅ Backend is live"}), 200
+    return "✅ Traffic counting API is running. Use POST /process_video"
 
-@app.route('/process_video', methods=['OPTIONS'])
-@cross_origin(origins="*")
-def process_video_options():
-    response = make_response()
-    response.headers['Access-Control-Allow-Origin'] = 'https://counting-traffic-frontend.vercel.app'
-    response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
-    return response
-
+# === Process uploaded video ===
 @app.route('/process_video', methods=['POST'])
-@cross_origin(origins="https://counting-traffic-frontend.vercel.app")
+@cross_origin(origins="*")  # ✅ Apply CORS to this route
 def process_video():
     if 'video' not in request.files:
         return jsonify({"error": "No video uploaded"}), 400
@@ -56,10 +53,9 @@ def process_video():
     fps = cap.get(cv2.CAP_PROP_FPS) or 30
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
     output_filename = f"processed_{input_filename}"
-    os.makedirs("static", exist_ok=True)
     output_path = os.path.join("static", output_filename)
+    os.makedirs("static", exist_ok=True)
     out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))
 
     class_counts = defaultdict(int)
@@ -72,8 +68,8 @@ def process_video():
         if not ret:
             break
         frame_count += 1
-        results = model.track(frame, persist=True, classes=[1, 2, 3, 5, 6, 7])
 
+        results = model.track(frame, persist=True, classes=[1, 2, 3, 5, 6, 7])
         if results and results[0].boxes.data is not None:
             boxes = results[0].boxes.xyxy.cpu()
             class_indices = results[0].boxes.cls.int().cpu().tolist()
@@ -113,10 +109,13 @@ def process_video():
         "video_url": f"https://{request.host}/static/{output_filename}"
     })
 
+# === Serve processed video ===
 @app.route('/static/<path:filename>')
+@cross_origin(origins="*")  # ✅ Also allow CORS for static download
 def static_files(filename):
     return send_from_directory('static', filename)
 
+# === Run app ===
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
