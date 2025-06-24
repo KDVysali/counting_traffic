@@ -1,19 +1,15 @@
 import os
 import uuid
 import cv2
-import logging
 import requests
-from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
+from flask import Flask, request, jsonify, send_from_directory, make_response
+from flask_cors import CORS, cross_origin
 from collections import defaultdict
 from ultralytics import YOLO
 
 app = Flask(__name__)
-
-# ✅ Allow CORS for your deployed Vercel frontend
 CORS(app, origins=["https://counting-traffic-frontend.vercel.app"])
 
-# === Load or download YOLOv8 model ===
 MODEL_PATH = 'yolo11l.pt'
 MODEL_URL = 'https://huggingface.co/DarleVysali/yolo-model/resolve/main/yolo11l.pt'
 
@@ -29,13 +25,22 @@ if not os.path.exists(MODEL_PATH):
 model = YOLO(MODEL_PATH)
 class_list = model.names
 
-# === Health check ===
-@app.route("/")
+@app.route('/')
+@cross_origin(origins="*")
 def index():
-    return jsonify({"status": "✅ Backend running"}), 200
+    return jsonify({"status": "✅ Backend is live"}), 200
 
-# === Handle uploaded video ===
-@app.route("/process_video", methods=["POST"])
+@app.route('/process_video', methods=['OPTIONS'])
+@cross_origin(origins="*")
+def process_video_options():
+    response = make_response()
+    response.headers['Access-Control-Allow-Origin'] = 'https://counting-traffic-frontend.vercel.app'
+    response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    return response
+
+@app.route('/process_video', methods=['POST'])
+@cross_origin(origins="https://counting-traffic-frontend.vercel.app")
 def process_video():
     if 'video' not in request.files:
         return jsonify({"error": "No video uploaded"}), 400
@@ -55,7 +60,6 @@ def process_video():
     output_filename = f"processed_{input_filename}"
     os.makedirs("static", exist_ok=True)
     output_path = os.path.join("static", output_filename)
-
     out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))
 
     class_counts = defaultdict(int)
@@ -67,7 +71,6 @@ def process_video():
         ret, frame = cap.read()
         if not ret:
             break
-
         frame_count += 1
         results = model.track(frame, persist=True, classes=[1, 2, 3, 5, 6, 7])
 
@@ -110,12 +113,10 @@ def process_video():
         "video_url": f"https://{request.host}/static/{output_filename}"
     })
 
-# === Serve processed videos ===
 @app.route('/static/<path:filename>')
 def static_files(filename):
     return send_from_directory('static', filename)
 
-# === Run locally or in production ===
-if __name__ == "__main__":
+if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
