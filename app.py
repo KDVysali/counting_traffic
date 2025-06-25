@@ -10,8 +10,16 @@ from ultralytics import YOLO
 app = Flask(__name__, static_folder="static")
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
-# ✅ CORS: allow both production and all preview domains using regex
-CORS(app, origins=r"^https:\/\/counting-traffic-frontend(-[a-z0-9]+)?\.vercel\.app$", supports_credentials=True)
+# ✅ Proper CORS configuration for all Vercel domains (production + preview)
+CORS(
+    app,
+    resources={
+        r"/.*": {
+            "origins": r"^https:\/\/counting-traffic-frontend(-[a-z0-9]+)?\.vercel\.app$"
+        }
+    },
+    supports_credentials=True
+)
 
 # === Download YOLO model if not already ===
 MODEL_PATH = 'yolo11l.pt'
