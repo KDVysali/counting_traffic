@@ -14,7 +14,7 @@ from ultralytics import YOLO
 # -----------------------------------------------------------------------------
 app = Flask(__name__)
 # Only allow your Vercel frontend
-CORS(app, origins=[os.environ.get("CORS_ALLOWED_ORIGINS", "https://counting-traffic-frontend.vercel.app")])
+CORS(app)
 
 # -----------------------------------------------------------------------------
 # Ensure model weights are present (Option 2: download at startup)
