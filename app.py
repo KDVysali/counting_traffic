@@ -1,8 +1,9 @@
 import os
 import tempfile
 import shutil
-from collections import defaultdict
+from pathlib import Path
 
+import requests
 import cv2
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -16,9 +17,25 @@ app = Flask(__name__)
 CORS(app, origins=[os.environ.get("CORS_ALLOWED_ORIGINS", "https://counting-traffic-frontend.vercel.app")])
 
 # -----------------------------------------------------------------------------
-# Load model once at startup
+# Ensure model weights are present (Option 2: download at startup)
 # -----------------------------------------------------------------------------
 MODEL_PATH = os.environ.get("YOLO_WEIGHTS", "yolo11l.pt")
+WEIGHTS_URL = os.environ.get("WEIGHTS_URL")  # e.g. https://my-bucket/.../yolo11l.pt
+
+if WEIGHTS_URL:
+    model_file = Path(MODEL_PATH)
+    if not model_file.exists():
+        print(f"Downloading weights from {WEIGHTS_URL} to {MODEL_PATH}...")
+        response = requests.get(WEIGHTS_URL, stream=True)
+        response.raise_for_status()
+        with open(MODEL_PATH, "wb") as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        print("Download complete.")
+
+# -----------------------------------------------------------------------------
+# Load model once at startup
+# -----------------------------------------------------------------------------
 model = YOLO(MODEL_PATH)
 class_list = model.names  # e.g. {0: 'person', 1: 'bicycle', ...}
 
