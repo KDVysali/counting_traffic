@@ -1,5 +1,6 @@
 import os
 import uuid
+import re
 import cv2
 import requests
 from flask import Flask, request, jsonify, send_from_directory
@@ -10,8 +11,16 @@ from ultralytics import YOLO
 app = Flask(__name__, static_folder="static")
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
-# ✅ Allow ONLY your Vercel frontend domain (for production)
-CORS(app, origins=["https://counting-traffic-frontend.vercel.app"], supports_credentials=True)
+# === Custom origin checker for Vercel (production + previews) ===
+def allow_vercel_origin(origin):
+    # Example match: https://counting-traffic-frontend.vercel.app
+    # or https://counting-traffic-frontend-xyz123.vercel.app
+    if not origin:
+        return False
+    pattern = r"^https:\/\/counting-traffic-frontend(-[a-z0-9]+)?\.vercel\.app$"
+    return re.match(pattern, origin) is not None
+
+CORS(app, origins=allow_vercel_origin, supports_credentials=True)
 
 # === Download YOLO model if not already ===
 MODEL_PATH = 'yolo11l.pt'
