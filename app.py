@@ -10,14 +10,13 @@ from ultralytics import YOLO
 app = Flask(__name__, static_folder="static")
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
-# ✅ Proper CORS configuration for all Vercel domains (production + preview)
+# ✅ CORS setup: explicit origin list
 CORS(
     app,
-    resources={
-        r"/.*": {
-            "origins": r"^https:\/\/counting-traffic-frontend(-[a-z0-9]+)?\.vercel\.app$"
-        }
-    },
+    resources={r"/.*": {"origins": [
+        "https://counting-traffic-frontend.vercel.app",
+        "https://counting-traffic-frontend-mourn1mlwt-vysalis-projects.vercel.app"  # preview deployment
+    ]}},
     supports_credentials=True
 )
 
