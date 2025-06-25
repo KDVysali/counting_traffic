@@ -3,14 +3,15 @@ import uuid
 import cv2
 import requests
 from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS, cross_origin
+from flask_cors import CORS
 from collections import defaultdict
 from ultralytics import YOLO
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static")
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
-# ✅ Allow ALL origins for now (test mode). Replace "*" with specific Vercel domain later if needed.
-CORS(app, origins="*", supports_credentials=True)
+# ✅ Allow ONLY your Vercel frontend domain (for production)
+CORS(app, origins=["https://counting-traffic-frontend.vercel.app"], supports_credentials=True)
 
 # === Download YOLO model if not already ===
 MODEL_PATH = 'yolo11l.pt'
@@ -29,15 +30,11 @@ if not os.path.exists(MODEL_PATH):
 model = YOLO(MODEL_PATH)
 class_list = model.names
 
-# === API Health Check ===
 @app.route('/')
-@cross_origin(origins="*")  # ✅ Apply CORS to root route too
 def index():
     return "✅ Traffic counting API is running. Use POST /process_video"
 
-# === Process uploaded video ===
 @app.route('/process_video', methods=['POST'])
-@cross_origin(origins="*")  # ✅ Apply CORS to this route
 def process_video():
     if 'video' not in request.files:
         return jsonify({"error": "No video uploaded"}), 400
@@ -82,7 +79,6 @@ def process_video():
                 cy = (y1 + y2) // 2
                 class_name = class_list[class_idx]
 
-                # Draw box and label
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                 cv2.putText(frame, f"{class_name} {track_id}", (x1, y1 - 10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
@@ -109,13 +105,10 @@ def process_video():
         "video_url": f"https://{request.host}/static/{output_filename}"
     })
 
-# === Serve processed video ===
 @app.route('/static/<path:filename>')
-@cross_origin(origins="*")  # ✅ Also allow CORS for static download
 def static_files(filename):
     return send_from_directory('static', filename)
 
-# === Run app ===
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
