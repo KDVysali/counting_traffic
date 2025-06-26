@@ -14,7 +14,7 @@ from ultralytics import YOLO
 # -----------------------------------------------------------------------------
 app = Flask(__name__)
 # Only allow your Vercel frontend
-CORS(app)
+CORS(app, resources={r"/.*": {"origins": "*"}})   # open for now
 
 # -----------------------------------------------------------------------------
 # Ensure model weights are present (Option 2: download at startup)
@@ -133,3 +133,5 @@ def count_vehicles():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host="0.0.0.0", port=port)
+
+gunicorn_app = app
