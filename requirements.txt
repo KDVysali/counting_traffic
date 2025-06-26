@@ -1,20 +1,19 @@
-# ---------------- Core libs ----------------
+# ---------- Regular libraries ----------
 Flask
 flask-cors
 gunicorn
 requests
-opencv-python-headless        # keep headless build
-pandas                        # (ultralytics depends on it)
+opencv-python-headless
+pandas          # (ultralytics needs it)
 
-# ---------------- ML stack (CPU only) ----------------
-# 1) point pip to the CPU wheel index
+# ---------- Force CPU-only PyTorch stack ----------
+# 1) Tell pip to also search the CPU wheel index
 --extra-index-url https://download.pytorch.org/whl/cpu
 
-# 2) pin CPU wheels
+# 2) Pin versions that exist in that CPU index
 torch==2.2.2+cpu
 torchvision==0.17.2+cpu
-torchaudio==2.2.2+cpu        # not strictly needed, but harmless & small
+torchaudio==2.2.2+cpu   # optional but small; ensures no nvidia deps
 
-# ---------------- Ultralytics (model code) ----------------
-# install *after* torch so it re-uses the CPU build
-ultralytics
+# ---------- Ultralytics (after torch) ----------
+ultralytics==8.3.159
