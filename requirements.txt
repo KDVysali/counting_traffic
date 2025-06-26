@@ -1,17 +1,19 @@
-# ---- core libs ----
+# ------------ core libs (no OpenCV yet) ------------
 Flask
 flask-cors
 gunicorn
 requests
-opencv-python-headless
-pandas                  # ultralytics needs it
+pandas
 
-# ---- CPU-only PyTorch stack (latest) ----
+# ------------ CPU-only PyTorch stack ---------------
 --extra-index-url https://download.pytorch.org/whl/cpu
-
 torch==2.7.1+cpu
 torchvision==0.22.1+cpu
-torchaudio==2.7.1+cpu   # small, optional
+# (torchaudio optional; you can delete it to shrink image)
+torchaudio==2.7.1+cpu
 
-# ---- Ultralytics (after torch so it keeps these wheels) ----
+# ------------ Ultralytics (installs opencv-python) --
 ultralytics==8.3.159
+
+# ------------ Force headless OpenCV (over-ride) -----
+opencv-python-headless==4.11.0.86
